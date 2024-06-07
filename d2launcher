@@ -792,6 +792,11 @@ exec_wine_exe_gamescope() {
     WINEPREFIX="$wineprefix" gamescope $gamescope_args -- $wine_init "$wine_default" start /unix "$@" 2>&1 | log
 }
 
+exec_wine_exe_gamescope_d2s() {
+    check_wine_install || return 1
+    WINEPREFIX="$wineprefix" gamescope -W 700 -H 600 -S stretch -F fsr -- $wine_init "$wine_default" start /unix "$@" 2>&1 | log
+}
+
 exec_wine_exe() {
     exec_wine start /unix "$@"
 }
@@ -830,7 +835,7 @@ exec_d2stats() {
     check_d2stats_install || return 1
     check_wine_install || return 1
     if [ "$gamescope" = "true" ]; then
-        (exec_wine_exe_gamescope "$D2_STATS_BIN_DIR/$D2_STATS_EXE") &
+        (exec_wine_exe_gamescope_d2s "$D2_STATS_BIN_DIR/$D2_STATS_EXE") &
     else
         (exec_wine_exe "$D2_STATS_BIN_DIR/$D2_STATS_EXE") &
     fi
