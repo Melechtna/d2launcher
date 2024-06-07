@@ -83,6 +83,10 @@ wineprefix="$WINE_INTERNAL_PREFIX"
 wine_user="$WINE_INTERNAL_USER"
 wine_init=""
 
+# Gamescope
+gamescope="false"
+gamescope_args="-F fsr -f"
+
 # Diablo II
 d2_dir="$SCRIPT_BIN_DIR/diablo2"
 d2_exe="Diablo II.exe"
@@ -174,6 +178,8 @@ main() {
     config_check_property "mxl_update_check" "$mxl_update_check"
     config_check_property "mxl_update_channel" "$mxl_update_channel"
     config_check_property "d2_stats_tray" "$d2_stats_tray"
+    config_check_property "gamescope" "$gamescope"
+    config_check_property "gamescope_args" "$gamescope_args"
 
     # Import config file
     # shellcheck disable=SC1090
@@ -781,6 +787,11 @@ exec_wine() {
     WINEPREFIX="$wineprefix" $wine_init "$wine_default" "$@" 2>&1 | log
 }
 
+exec_wine_exe_gamescope() {
+    check_wine_install || return 1
+    WINEPREFIX="$wineprefix" gamescope $gamescope_args -- $wine_init "$wine_default" start /unix "$@" 2>&1 | log
+}
+
 exec_wine_exe() {
     exec_wine start /unix "$@"
 }
@@ -795,13 +806,21 @@ exec_diablo2() {
             zenity_error "$d2_dir/$D2_SIGMALOADER_EXE not found"
             return 1
         fi
-        exec_wine_exe "$d2_dir/$D2_SIGMALOADER_EXE" "$d2_args"
+        if [ "$gamescope" = "true" ]; then
+            exec_wine_exe_gamescope "$d2_dir/$D2_SIGMALOADER_EXE" "$d2_args"
+        else
+            exec_wine_exe "$d2_dir/$D2_SIGMALOADER_EXE" "$d2_args"
+        fi
     else
         if [ ! -f "$d2_dir/$d2_exe" ]; then
             zenity_error "$d2_dir/$d2_exe not found"
             return 1
         fi
-        exec_wine_exe "$d2_dir/$d2_exe" "$d2_args"
+        if [ "$gamescope" = "true" ]; then
+            exec_wine_exe_gamescope "$d2_dir/$d2_exe" "$d2_args"
+        else
+            exec_wine_exe "$d2_dir/$d2_exe" "$d2_args"
+        fi
     fi
     exit 0
 }
@@ -810,7 +829,11 @@ exec_d2stats() {
     check_d2_dir || return 1
     check_d2stats_install || return 1
     check_wine_install || return 1
-    (exec_wine_exe "$D2_STATS_BIN_DIR/$D2_STATS_EXE") &
+    if [ "$gamescope" = "true" ]; then
+        (exec_wine_exe_gamescope "$D2_STATS_BIN_DIR/$D2_STATS_EXE") &
+    else
+        (exec_wine_exe "$D2_STATS_BIN_DIR/$D2_STATS_EXE") &
+    fi
     # Workaround for disabling D2 Stats system tray (trying 5s to close the window)
     if [ -x "$(command -v wmctrl)" ] && [ "$d2_stats_tray" = "false" ]; then
         for ((i = 1; i < 6; i++)); do
